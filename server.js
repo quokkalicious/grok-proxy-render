@@ -1,35 +1,44 @@
-import express from "express";
+// server.js
+import express from 'express'
+import fetch from 'node-fetch'
 
-const app = express();
-app.use(express.json());
+const app = express()
+const PORT = process.env.PORT || 10000
 
-app.post("/api/grok", async (req, res) => {
-  const { prompt } = req.body || {};
-  if (!prompt || typeof prompt !== "string") {
-    return res.status(400).json({ error: "Missing prompt" });
-  }
-  const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Missing GROK_API_KEY" });
-  }
+app.use(express.json())
+
+app.post('/api/grok', async (req, res) => {
+  const { prompt } = req.body
+  if (!prompt) return res.status(400).json({ error: 'Missing prompt' })
+
+  const apiKey = process.env.GROK_API_KEY
+  if (!apiKey) return res
+    .status(500)
+    .json({ error: 'Missing GROK_API_KEY env var' })
+
   try {
-    const grokRes = await fetch("https://chat.x.ai/api/chat", {
-      method: "POST",
+    const grokRes = await fetch('https://chat.x.ai/api/chat', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "grok-1.5",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await grokRes.json();
-    res.status(grokRes.status).json(data);
+        model: 'grok-1.5',
+        messages: [
+          { role: 'user', content: prompt }
+        ]
+      })
+    })
+    const data = await grokRes.json()
+    return res.json(data)
   } catch (err) {
-    res.status(500).json({ error: "Fetch failed", detail: err.message });
+    return res
+      .status(500)
+      .json({ error: 'Grok proxy failed', detail: err.message })
   }
-});
+})
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server listening on port ${PORT}`)
+)
