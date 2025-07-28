@@ -1,44 +1,41 @@
-const express = require('express');
-const app = express();
+import express from "express";
 
-// parse JSON bodies
+// (Node 18+/22+ has a global `fetch` — no extra install needed)
+
+const app = express();
 app.use(express.json());
 
-// Use Render’s PORT or fallback to 10000 locally
-const port = process.env.PORT || 10000;
-
-app.post('/api/grok', async (req, res) => {
+app.post("/api/grok", async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) {
-    return res.status(400).json({ error: 'Missing prompt' });
+    return res.status(400).json({ error: "Missing prompt" });
   }
 
   try {
-    // `fetch` is built into Node 18+—no extra install needed
-    const grokRes = await fetch('https://chat.openrouter.ai/api/chat', {
-      method: 'POST',
+    const grokRes = await fetch("https://chat.x.ai/api/chat", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.GROK_API_KEY}`
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        prompt,
-        max_tokens: 512
-      })
+      body: JSON.stringify({ prompt })
     });
+
+    if (!grokRes.ok) {
+      const text = await grokRes.text();
+      return res.status(502).json({ error: "Upstream error", details: text });
+    }
 
     const data = await grokRes.json();
-    return res.status(200).json(data);
+    return res.json(data);
 
   } catch (err) {
-    return res.status(500).json({
-      error: 'Grok proxy failed',
-      detail: err.message
-    });
+    return res.status(500).json({ error: "Grok proxy failed", detail: err.message });
   }
 });
 
+// Render (and other hosts) expect you to bind to process.env.PORT
+const port = process.env.PORT || 10000;
 app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+  console.log(`🚀 Server listening on port ${port}`);
 });
